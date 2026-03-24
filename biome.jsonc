@@ -9,5 +9,12 @@
       "style": { "noParameterProperties": "off" }
     }
   },
+  "assist": {
+    "actions": {
+      "source": {
+        "useSortedInterfaceMembers": "off"
+      }
+    }
+  },
   "javascript": { "formatter": { "semicolons": "asNeeded" } }
 }

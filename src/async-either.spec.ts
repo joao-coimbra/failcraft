@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from "bun:test"
-import { type Either, left, right } from "./either"
 import { from } from "./async-either"
+import { type Either, left, right } from "./either"
 
 function doSomething(shouldSuccess: boolean): Either<string, number> {
   if (shouldSuccess) {
@@ -165,13 +165,17 @@ describe("AsyncEither", () => {
 
 describe("from()", () => {
   test("wraps a resolved right Promise<Either> into AsyncEither", async () => {
-    const either = await from(Promise.resolve(right<number, string>(42))).toPromise()
+    const either = await from(
+      Promise.resolve(right<number, string>(42))
+    ).toPromise()
     expect(either.isRight()).toBe(true)
     expect(either.value).toBe(42)
   })
 
   test("wraps a resolved left Promise<Either> into AsyncEither", async () => {
-    const either = await from(Promise.resolve(left<string, number>("oops"))).toPromise()
+    const either = await from(
+      Promise.resolve(left<string, number>("oops"))
+    ).toPromise()
     expect(either.isLeft()).toBe(true)
     expect(either.value).toBe("oops")
   })

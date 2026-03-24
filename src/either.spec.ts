@@ -97,7 +97,9 @@ describe("Either", () => {
     })
 
     test("andThen() with async fn should return AsyncEither resolving to right", async () => {
-      const asyncResult = await result.andThen(async (n) => right(n + 5)).toPromise()
+      const asyncResult = await result
+        .andThen(async (n) => right(n + 5))
+        .toPromise()
       expect(asyncResult.isRight()).toBe(true)
       expect(asyncResult.value).toBe(15)
     })
