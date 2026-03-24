@@ -1,4 +1,3 @@
-import { AsyncEither } from "./async-either"
 import { type Either, left, right } from "./either"
 
 /**
@@ -22,21 +21,18 @@ export const trySync = <const L = unknown, const R = unknown>(
 }
 
 /**
- * Wraps an async function in an {@link AsyncEither}, catching any rejection as a left.
+ * Wraps an async function in a `Promise<Either>`, catching any rejection as a left.
  *
  * @param fn - An async function that may reject.
- * @returns An `AsyncEither` that resolves to `right(result)` or `left(error)`.
+ * @returns A `Promise` that resolves to `right(result)` or `left(error)`.
  *
  * @example
- * const result = tryAsync(() => fetch("/api/data").then(r => r.json()))
- * // AsyncEither<unknown, Data>
+ * const result = await tryAsync(() => fetch("/api/data").then(r => r.json()))
+ * // Either<unknown, Data>
  */
 export const tryAsync = <const L = unknown, const R = unknown>(
   fn: () => Promise<R>
-): AsyncEither<L, R> => {
-  return new AsyncEither(
-    fn()
-      .then((value) => right<R, L>(value))
-      .catch((error) => left<L, R>(error as L))
-  )
-}
+): Promise<Either<L, R>> =>
+  fn()
+    .then((value) => right<R, L>(value))
+    .catch((error) => left<L, R>(error as L))

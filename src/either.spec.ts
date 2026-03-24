@@ -90,20 +90,24 @@ describe("Either", () => {
       expect(result.getOrThrowWith((e) => new Error(e))).toBe(10)
     })
 
-    test("transformAsync() should return an AsyncEither resolving to right", async () => {
-      const asyncResult = await result
-        .transformAsync(async (n) => n * 2)
-        .toPromise()
+    test("transform() with async fn should return AsyncEither resolving to right", async () => {
+      const asyncResult = await result.transform(async (n) => n * 2).toPromise()
       expect(asyncResult.isRight()).toBe(true)
       expect(asyncResult.value).toBe(20)
     })
 
-    test("andThenAsync() should return an AsyncEither resolving to right", async () => {
+    test("andThen() with async fn should return AsyncEither resolving to right", async () => {
       const asyncResult = await result
-        .andThenAsync(async (n) => right(n + 5))
+        .andThen(async (n) => right(n + 5))
         .toPromise()
       expect(asyncResult.isRight()).toBe(true)
       expect(asyncResult.value).toBe(15)
+    })
+
+    test("toMaybe() should return just(value)", () => {
+      const m = result.toMaybe()
+      expect(m.isJust()).toBe(true)
+      expect(m.value).toBe(10)
     })
   })
 
@@ -188,20 +192,25 @@ describe("Either", () => {
       ).toThrow("wrapped: error")
     })
 
-    test("transformAsync() should return an AsyncEither resolving to the same left", async () => {
+    test("transform() with async fn should return AsyncEither resolving to the same left", async () => {
       const fn = mock(async (n: number) => n * 2)
-      const asyncResult = await result.transformAsync(fn).toPromise()
+      const asyncResult = await result.transform(fn).toPromise()
       expect(fn).not.toHaveBeenCalled()
       expect(asyncResult.isLeft()).toBe(true)
       expect(asyncResult.value).toBe("error")
     })
 
-    test("andThenAsync() should return an AsyncEither resolving to the same left", async () => {
+    test("andThen() with async fn should return AsyncEither resolving to the same left", async () => {
       const fn = mock(async (n: number) => right(n + 5))
-      const asyncResult = await result.andThenAsync(fn).toPromise()
+      const asyncResult = await result.andThen(fn).toPromise()
       expect(fn).not.toHaveBeenCalled()
       expect(asyncResult.isLeft()).toBe(true)
       expect(asyncResult.value).toBe("error")
+    })
+
+    test("toMaybe() should return nothing()", () => {
+      const m = result.toMaybe()
+      expect(m.isNothing()).toBe(true)
     })
   })
 })
