@@ -1,5 +1,6 @@
 import { describe, expect, mock, test } from "bun:test"
 import { type Either, left, right } from "./either"
+import { from } from "./async-either"
 
 function doSomething(shouldSuccess: boolean): Either<string, number> {
   if (shouldSuccess) {
@@ -10,7 +11,7 @@ function doSomething(shouldSuccess: boolean): Either<string, number> {
 
 describe("AsyncEither", () => {
   describe("when success", () => {
-    const async$ = doSomething(true).transformAsync(async (n) => n)
+    const async$ = doSomething(true).transform(async (n) => n)
 
     test("toPromise() should resolve to a right Either", async () => {
       const either = await async$.toPromise()
@@ -58,17 +59,15 @@ describe("AsyncEither", () => {
       expect(either.value).toBe("chained error")
     })
 
-    test("transformAsync() should map the right value asynchronously", async () => {
-      const either = await async$.transformAsync(async (n) => n * 3).toPromise()
+    test("transform() with async fn should map the right value asynchronously", async () => {
+      const either = await async$.transform(async (n) => n * 3).toPromise()
       expect(either.isRight()).toBe(true)
       expect(either.value).toBe(30)
     })
 
-    test("andThenAsync() should chain an async Either-returning fn", async () => {
+    test("andThen() with async fn should chain an async Either-returning fn", async () => {
       const either = await async$
-        .andThenAsync(
-          async (n): Promise<Either<string, number>> => right(n + 5)
-        )
+        .andThen(async (n): Promise<Either<string, number>> => right(n + 5))
         .toPromise()
       expect(either.isRight()).toBe(true)
       expect(either.value).toBe(15)
@@ -88,7 +87,7 @@ describe("AsyncEither", () => {
   })
 
   describe("when failure", () => {
-    const async$ = doSomething(false).transformAsync(async (n) => n)
+    const async$ = doSomething(false).transform(async (n) => n)
 
     test("toPromise() should resolve to a left Either", async () => {
       const either = await async$.toPromise()
@@ -132,17 +131,17 @@ describe("AsyncEither", () => {
       expect(either.value).toBe("error")
     })
 
-    test("transformAsync() should not call fn and pass left through", async () => {
+    test("transform() with async fn should not call fn and pass left through", async () => {
       const fn = mock(async (n: number) => n * 2)
-      const either = await async$.transformAsync(fn).toPromise()
+      const either = await async$.transform(fn).toPromise()
       expect(fn).not.toHaveBeenCalled()
       expect(either.isLeft()).toBe(true)
       expect(either.value).toBe("error")
     })
 
-    test("andThenAsync() should not call fn and pass left through", async () => {
+    test("andThen() with async fn should not call fn and pass left through", async () => {
       const fn = mock(async (n: number) => right(n + 5))
-      const either = await async$.andThenAsync(fn).toPromise()
+      const either = await async$.andThen(fn).toPromise()
       expect(fn).not.toHaveBeenCalled()
       expect(either.isLeft()).toBe(true)
       expect(either.value).toBe("error")
@@ -161,5 +160,26 @@ describe("AsyncEither", () => {
         async$.getOrThrowWith((e) => new Error(`wrapped: ${e}`))
       ).rejects.toThrow("wrapped: error")
     })
+  })
+})
+
+describe("from()", () => {
+  test("wraps a resolved right Promise<Either> into AsyncEither", async () => {
+    const either = await from(Promise.resolve(right<number, string>(42))).toPromise()
+    expect(either.isRight()).toBe(true)
+    expect(either.value).toBe(42)
+  })
+
+  test("wraps a resolved left Promise<Either> into AsyncEither", async () => {
+    const either = await from(Promise.resolve(left<string, number>("oops"))).toPromise()
+    expect(either.isLeft()).toBe(true)
+    expect(either.value).toBe("oops")
+  })
+
+  test("allows chaining transform after from()", async () => {
+    const either = await from(Promise.resolve(right<number, string>(10)))
+      .transform((n) => n * 2)
+      .toPromise()
+    expect(either.value).toBe(20)
   })
 })

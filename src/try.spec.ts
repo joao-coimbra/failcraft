@@ -29,17 +29,17 @@ describe("trySync()", () => {
 
 describe("tryAsync()", () => {
   describe("when fn resolves", () => {
-    test("should return an AsyncEither resolving to right", async () => {
-      const either = await tryAsync(() => Promise.resolve(42)).toPromise()
+    test("should return a Promise resolving to right", async () => {
+      const either = await tryAsync(() => Promise.resolve(42))
       expect(either.isRight()).toBe(true)
       expect(either.value).toBe(42)
     })
   })
 
   describe("when fn rejects", () => {
-    test("should return an AsyncEither resolving to left", async () => {
+    test("should return a Promise resolving to left", async () => {
       const error = new Error("fetch failed")
-      const either = await tryAsync(() => Promise.reject(error)).toPromise()
+      const either = await tryAsync(() => Promise.reject(error))
       expect(either.isLeft()).toBe(true)
       expect(either.value).toBe(error)
     })
