@@ -1,0 +1,13 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "extends": ["ultracite/biome/core"],
+  "linter": {
+    "rules": {
+      "performance": {
+        "noBarrelFile": "off"
+      },
+      "style": { "noParameterProperties": "off" }
+    }
+  },
+  "javascript": { "formatter": { "semicolons": "asNeeded" } }
+}

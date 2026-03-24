@@ -1,0 +1,45 @@
+{
+  "name": "failcraft",
+  "description": "",
+  "version": "0.1.0",
+  "type": "module",
+  "private": false,
+  "files": [
+    "dist"
+  ],
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "keywords": [],
+  "author": {
+    "name": "João Henrique Benatti Coimbra",
+    "url": "https://github.com/joao-coimbra"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/joao-coimbra/failcraft#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/joao-coimbra/failcraft.git"
+  },
+  "bugs": {
+    "url": "https://github.com/joao-coimbra/failcraft/issues"
+  },
+  "scripts": {
+    "build": "bunup",
+    "test": "bun test",
+    "check": "ultracite check",
+    "fix": "ultracite fix",
+    "release": "bun publish --access public",
+    "prepublishOnly": "bun run build",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.7",
+    "@types/bun": "latest",
+    "bunup": "^0.16.31",
+    "husky": "^9.1.7",
+    "ultracite": "7.3.2"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
