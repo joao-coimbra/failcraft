@@ -1,3 +1,4 @@
+import type { AsyncMaybe } from "./async-maybe"
 import { BaseJust, BaseMaybe, BaseNothing } from "./base-maybe"
 import type { Either } from "./either"
 
@@ -33,9 +34,7 @@ export abstract class Maybe<T> extends BaseMaybe<T> {
    * Maps the value through `fn`, leaving Nothing untouched.
    * Pass an async function to automatically get an {@link AsyncMaybe} back.
    */
-  abstract transform<U>(
-    fn: (value: T) => Promise<U>
-  ): import("./async-maybe").AsyncMaybe<U>
+  abstract transform<U>(fn: (value: T) => Promise<U>): AsyncMaybe<U>
   abstract transform<U>(fn: (value: T) => U): Maybe<U>
 
   /**
@@ -43,9 +42,7 @@ export abstract class Maybe<T> extends BaseMaybe<T> {
    * Pass an async function to automatically get an {@link AsyncMaybe} back.
    * Short-circuits on Nothing.
    */
-  abstract andThen<U>(
-    fn: (value: T) => Promise<Maybe<U>>
-  ): import("./async-maybe").AsyncMaybe<U>
+  abstract andThen<U>(fn: (value: T) => Promise<Maybe<U>>): AsyncMaybe<U>
   abstract andThen<U>(fn: (value: T) => Maybe<U>): Maybe<U>
 
   /** Returns `just(value)` when predicate passes, `nothing()` when it fails. */
@@ -66,13 +63,9 @@ export abstract class Maybe<T> extends BaseMaybe<T> {
 export class Just<T> extends BaseJust<T> {
   declare readonly value: T
 
-  transform<U>(
-    fn: (value: T) => Promise<U>
-  ): import("./async-maybe").AsyncMaybe<U>
+  transform<U>(fn: (value: T) => Promise<U>): AsyncMaybe<U>
   transform<U>(fn: (value: T) => U): Maybe<U>
-  transform<U>(
-    fn: (value: T) => U | Promise<U>
-  ): Maybe<U> | import("./async-maybe").AsyncMaybe<U> {
+  transform<U>(fn: (value: T) => U | Promise<U>): Maybe<U> | AsyncMaybe<U> {
     const result = fn(this.value)
     if (result instanceof Promise) {
       const { AsyncMaybe } = require("./async-maybe")
@@ -81,13 +74,11 @@ export class Just<T> extends BaseJust<T> {
     return just(result as U)
   }
 
-  andThen<U>(
-    fn: (value: T) => Promise<Maybe<U>>
-  ): import("./async-maybe").AsyncMaybe<U>
+  andThen<U>(fn: (value: T) => Promise<Maybe<U>>): AsyncMaybe<U>
   andThen<U>(fn: (value: T) => Maybe<U>): Maybe<U>
   andThen<U>(
     fn: (value: T) => Maybe<U> | Promise<Maybe<U>>
-  ): Maybe<U> | import("./async-maybe").AsyncMaybe<U> {
+  ): Maybe<U> | AsyncMaybe<U> {
     const result = fn(this.value)
     if (result instanceof Promise) {
       const { AsyncMaybe } = require("./async-maybe")
@@ -119,13 +110,9 @@ export class Just<T> extends BaseJust<T> {
 }
 
 export class Nothing<T = never> extends BaseNothing<T> {
-  transform<U>(
-    fn: (value: T) => Promise<U>
-  ): import("./async-maybe").AsyncMaybe<U>
+  transform<U>(fn: (value: T) => Promise<U>): AsyncMaybe<U>
   transform<U>(fn: (value: T) => U): Maybe<U>
-  transform<U>(
-    fn: (value: T) => U | Promise<U>
-  ): Maybe<U> | import("./async-maybe").AsyncMaybe<U> {
+  transform<U>(fn: (value: T) => U | Promise<U>): Maybe<U> | AsyncMaybe<U> {
     // Note: () => Promise.resolve(...) without async keyword is not detected here.
     // Use async () => ... for reliable async detection on Nothing.
     if (isAsyncFn(fn as (...args: unknown[]) => unknown)) {
@@ -135,13 +122,11 @@ export class Nothing<T = never> extends BaseNothing<T> {
     return this as unknown as Maybe<U>
   }
 
-  andThen<U>(
-    fn: (value: T) => Promise<Maybe<U>>
-  ): import("./async-maybe").AsyncMaybe<U>
+  andThen<U>(fn: (value: T) => Promise<Maybe<U>>): AsyncMaybe<U>
   andThen<U>(fn: (value: T) => Maybe<U>): Maybe<U>
   andThen<U>(
     fn: (value: T) => Maybe<U> | Promise<Maybe<U>>
-  ): Maybe<U> | import("./async-maybe").AsyncMaybe<U> {
+  ): Maybe<U> | AsyncMaybe<U> {
     if (isAsyncFn(fn as (...args: unknown[]) => unknown)) {
       const { AsyncMaybe } = require("./async-maybe")
       return new AsyncMaybe(Promise.resolve(this as unknown as Maybe<U>))
