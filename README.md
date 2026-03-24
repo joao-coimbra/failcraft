@@ -17,7 +17,7 @@
 
 <br />
 
-[Install](#install) · [Either](#either) · [Chaining](#chaining) · [Async](#async) · [Try helpers](#try-helpers) · [API](#api)
+[Install](#install) · [Either](#either) · [Chaining](#chaining) · [Async](#async) · [Maybe](#maybe) · [Result](#result) · [Try helpers](#try-helpers) · [API](#api)
 
 <br />
 
@@ -86,21 +86,94 @@ divide(10, 2)
 
 ## Async
 
-`AsyncEither<L, R>` is a promise-based wrapper with the same chainable API:
+`transform()` and `andThen()` are overloaded — pass an async function and the chain automatically becomes an `AsyncEither<L, R>`:
 
 ```ts
-import { right } from 'failcraft'
+import { right, from } from 'failcraft'
 
+// Async fn triggers the overload → returns AsyncEither
 right(1)
-  .transformAsync(async (n) => fetchUser(n))    // Either → AsyncEither
-  .andThenAsync(async (user) => saveUser(user)) // async chain
-  .transform((user) => user.name)               // sync step mid-chain
+  .transform(async (n) => fetchUser(n))    // Either → AsyncEither
+  .andThen(async (user) => saveUser(user)) // async chain
+  .transform((user) => user.name)          // sync step mid-chain
   .match({
     left: (err) => `Error: ${err}`,
     right: (name) => `Saved: ${name}`,
   })
   // returns Promise<string>
 ```
+
+Use `from()` to wrap an existing `Promise<Either>` into the chainable `AsyncEither` API:
+
+```ts
+import { from } from 'failcraft'
+
+const result = await from(fetchEither())
+  .transform(n => n * 2)
+  .toPromise()
+```
+
+---
+
+## Maybe
+
+`Maybe<T>` represents an optional value — `Just<T>` (present) or `Nothing` (absent). Unlike `null` checks, it's composable and chainable:
+
+```ts
+import { maybe, just, nothing } from 'failcraft'
+
+// maybe() wraps any value — null/undefined become Nothing, everything else Just
+// Note: falsy values like 0 and "" become Just (only null/undefined → Nothing)
+const name = maybe(user.nickname)  // Maybe<string>
+
+name
+  .transform(s => s.toUpperCase())           // maps if Just, skips if Nothing
+  .filter(s => s.length > 2)                // Nothing if predicate fails
+  .orDefault("ANONYMOUS")                   // unwrap with fallback
+
+// Pattern match
+name.match({
+  just: (n) => `Hello, ${n}!`,
+  nothing: () => "Hello, stranger!",
+})
+
+// Convert to Either
+name.toEither("no nickname set")  // Either<string, string>
+```
+
+`transform()` and `andThen()` also accept async functions, returning `AsyncMaybe<T>`:
+
+```ts
+maybe(userId)
+  .andThen(async (id) => fetchUser(id))   // Maybe → AsyncMaybe
+  .transform((user) => user.name)
+  .orDefault("unknown")
+  // returns Promise<string>
+```
+
+---
+
+## Result
+
+`Result<T, E>` is a semantic alias for `Either<E, T>` with success-first parameters and `ok()`/`err()` constructors — ideal when you want readable error handling without custom classes:
+
+```ts
+import { ok, err, type Result } from 'failcraft'
+
+async function findUser(id: number): Promise<Result<User, "not_found">> {
+  const user = await db.users.findOne({ id })
+  return user ? ok(user) : err("not_found")
+}
+
+const result = await findUser(42)
+
+result.match({
+  right: (user) => `Found: ${user.name}`,
+  left: (e) => `Error: ${e}`,              // e is typed as "not_found"
+})
+```
+
+Since `Result<T, E>` is just `Either<E, T>`, the entire `Either` API is available — `transform`, `andThen`, `orDefault`, `match`, and async overloads all work without any additional imports.
 
 ---
 
@@ -115,9 +188,9 @@ import { trySync, tryAsync } from 'failcraft'
 const parsed = trySync(() => JSON.parse(rawJson))
 // Either<unknown, unknown>
 
-// Async
-const data = tryAsync(() => fetch("/api").then(r => r.json()))
-// AsyncEither<unknown, unknown>
+// Async — tryAsync returns Promise<Either>, compatible with from()
+const data = await tryAsync(() => fetch("/api").then(r => r.json()))
+// Either<unknown, unknown>
 
 data
   .transform((d) => d.items)
@@ -141,13 +214,12 @@ Constructors for `Either<L, R>`.
 |---|---|
 | `.isLeft()` / `.isRight()` | Narrow the type to `Left` or `Right` |
 | `.isError()` / `.isSuccess()` | Aliases for `.isLeft()` / `.isRight()` |
-| `.transform(fn)` | Map the right value; pass left through |
-| `.andThen(fn)` | Chain an `Either`-returning fn; short-circuits on left |
-| `.transformAsync(fn)` | Like `transform`, but `fn` returns `Promise` → `AsyncEither` |
-| `.andThenAsync(fn)` | Like `andThen`, but `fn` returns `Promise<Either>` → `AsyncEither` |
+| `.transform(fn)` | Map the right value; async `fn` returns `AsyncEither` |
+| `.andThen(fn)` | Chain an `Either`-returning fn; async `fn` returns `AsyncEither` |
 | `.orDefault(value)` | Unwrap right or return fallback |
 | `.getOrThrow()` | Unwrap right or throw the left value |
 | `.getOrThrowWith(fn)` | Unwrap right or throw `fn(leftValue)` |
+| `.toMaybe()` | Convert to `Maybe<R>` — right becomes `Just`, left becomes `Nothing` |
 | `.on(cases)` | Side-effect tap; returns `this` |
 | `.match(cases)` | Exhaustive pattern match; returns `T` |
 
@@ -159,9 +231,44 @@ Same interface as `Either` but every method returns `AsyncEither` or `Promise`. 
 |---|---|
 | `.toPromise()` | Returns the underlying `Promise<Either<L, R>>` |
 
+### `from(promise)`
+
+Wraps a `Promise<Either<L, R>>` into a chainable `AsyncEither<L, R>`.
+
+### `Maybe<T>`
+
+| Method | Description |
+|---|---|
+| `.isJust()` / `.isNothing()` | Narrow the type |
+| `.transform(fn)` | Map the value; async `fn` returns `AsyncMaybe` |
+| `.andThen(fn)` | Chain a `Maybe`-returning fn; async `fn` returns `AsyncMaybe` |
+| `.filter(predicate)` | Return `Nothing` when predicate fails |
+| `.orDefault(value)` | Unwrap or return fallback |
+| `.orNothing()` | Unwrap to `T \| undefined` |
+| `.orThrow(error)` | Unwrap or throw |
+| `.toEither(leftValue)` | Convert to `Either` — `Just` → `right`, `Nothing` → `left` |
+| `.on(cases)` | Side-effect tap; returns `this` |
+| `.match(cases)` | Exhaustive pattern match; returns `T` |
+
+### `maybe(value)` / `just(value)` / `nothing()`
+
+Constructors for `Maybe<T>`. `maybe()` maps `null`/`undefined` to `Nothing`, everything else to `Just`.
+
+### `AsyncMaybe<T>`
+
+Same interface as `Maybe` but every method returns `AsyncMaybe` or `Promise`. Extra method:
+
+| Method | Description |
+|---|---|
+| `.toPromise()` | Returns the underlying `Promise<Maybe<T>>` |
+
+### `Result<T, E>`
+
+Type alias: `Result<T, E>` ≡ `Either<E, T>`. Use with `ok(value)` / `err(error)` constructors.
+
 ### `trySync(fn)` / `tryAsync(fn)`
 
-Wrap a possibly-throwing function. Returns `Either` or `AsyncEither` respectively.
+Wrap a possibly-throwing function. `trySync` returns `Either`, `tryAsync` returns `Promise<Either>`.
 
 ---
 

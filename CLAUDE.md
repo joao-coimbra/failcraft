@@ -193,10 +193,15 @@ bun run release --tag next
 
 ```
 src/
+├── index.ts          # Public re-exports for everything below
 ├── base-either.ts    # Abstract base classes (BaseEither, BaseLeft, BaseRight) and shared interfaces (EitherMatch, EitherOn)
-├── either.ts         # Either<L,R>, Left, Right — sync Either with transform/andThen/getOrThrow/orDefault; left() and right() constructors
-├── async-either.ts   # AsyncEither<L,R> — promise-based Either wrapper with the same chainable API
-└── try.ts            # trySync() / tryAsync() — safe wrappers around try/catch that return Either / AsyncEither
+├── either.ts         # Either<L,R>, Left, Right — sync Either with overloaded transform/andThen/toMaybe; left() and right() constructors
+├── async-either.ts   # AsyncEither<L,R> — promise-based Either wrapper with the same chainable API; from() constructor
+├── base-maybe.ts     # Abstract base classes (BaseMaybe, BaseJust, BaseNothing) and shared interfaces (MaybeMatch, MaybeOn)
+├── maybe.ts          # Maybe<T>, Just<T>, Nothing — sync Maybe with overloaded transform/andThen/filter/toEither; maybe(), just(), nothing() constructors
+├── async-maybe.ts    # AsyncMaybe<T> — promise-based Maybe wrapper with the same chainable API
+├── result.ts         # Result<T,E> type alias over Either<E,T>; ok() and err() constructors
+└── try.ts            # trySync() / tryAsync() — safe wrappers around try/catch that return Either / Promise<Either>
 ```
 
 Test files are co-located with source as `*.spec.ts`.
