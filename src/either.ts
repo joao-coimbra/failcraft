@@ -1,7 +1,27 @@
-import type { AsyncEither } from "./async-either"
 import { BaseEither, BaseLeft, BaseRight } from "./base-either"
 
 export type { EitherMatch, EitherOn } from "./base-either"
+
+const AsyncFunction = Object.getPrototypeOf(
+  // biome-ignore lint/suspicious/noEmptyBlockStatements: needed to get AsyncFunction constructor
+  async function asyncNoop() {}
+).constructor
+
+function isAsyncFn(fn: (...args: unknown[]) => unknown): boolean {
+  if (fn instanceof AsyncFunction) {
+    return true
+  }
+  // Fallback for wrapped functions (e.g. test mocks) that expose getMockImplementation
+  const wrapped = (fn as { getMockImplementation?: () => unknown })
+    .getMockImplementation
+  if (typeof wrapped === "function") {
+    const impl = wrapped.call(fn)
+    if (impl instanceof AsyncFunction) {
+      return true
+    }
+  }
+  return false
+}
 
 /**
  * A synchronous discriminated union representing either a failure (`Left`)
@@ -17,35 +37,32 @@ export type { EitherMatch, EitherOn } from "./base-either"
 export abstract class Either<L, R> extends BaseEither<L, R> {
   /**
    * Maps the right value through `fn`, leaving a left untouched.
+   * Pass an async function to automatically get an {@link AsyncEither} back.
    *
    * @example
-   * right(2).transform(n => n * 3) // right(6)
-   * left("err").transform(n => n * 3) // left("err")
+   * right(2).transform(n => n * 3)           // Either<L, number>
+   * right(2).transform(async n => n * 3)     // AsyncEither<L, number>
    */
+  abstract transform<T>(
+    fn: (value: R) => Promise<T>
+  ): import("./async-either").AsyncEither<L, T>
   abstract transform<T>(fn: (value: R) => T): Either<L, T>
 
   /**
-   * Chains a computation that itself returns an `Either`, flattening the result.
+   * Chains a computation returning an `Either`, flattening the result.
+   * Pass an async function to automatically get an {@link AsyncEither} back.
    * Short-circuits on left.
-   *
-   * @example
-   * right(2).andThen(n => (n > 0 ? right(n * 3) : left("negative"))) // right(6)
    */
+  abstract andThen<T>(
+    fn: (value: R) => Promise<Either<L, T>>
+  ): import("./async-either").AsyncEither<L, T>
   abstract andThen<T>(fn: (value: R) => Either<L, T>): Either<L, T>
 
   /**
-   * Like {@link transform}, but the mapping function returns a `Promise`.
-   * Produces an {@link AsyncEither} so async chains remain composable.
+   * Converts this `Either` to a `Maybe`.
+   * right(value) → just(value), left → nothing().
    */
-  abstract transformAsync<T>(fn: (value: R) => Promise<T>): AsyncEither<L, T>
-
-  /**
-   * Like {@link andThen}, but the chained computation is async.
-   * Produces an {@link AsyncEither}.
-   */
-  abstract andThenAsync<T>(
-    fn: (value: R) => Promise<Either<L, T>>
-  ): AsyncEither<L, T>
+  abstract toMaybe(): import("./maybe").Maybe<R>
 
   /**
    * Returns the right value if present, otherwise returns `defaultValue`.
@@ -73,22 +90,37 @@ export abstract class Either<L, R> extends BaseEither<L, R> {
 export class Left<L, R = never> extends BaseLeft<L, R> {
   declare readonly value: L
 
-  transform<T>(_fn: (value: R) => T): Either<L, T> {
+  transform<T>(
+    fn: (value: R) => Promise<T>
+  ): import("./async-either").AsyncEither<L, T>
+  transform<T>(fn: (value: R) => T): Either<L, T>
+  transform<T>(
+    fn: (value: R) => T | Promise<T>
+  ): Either<L, T> | import("./async-either").AsyncEither<L, T> {
+    if (isAsyncFn(fn as (...args: unknown[]) => unknown)) {
+      const { AsyncEither } = require("./async-either")
+      return new AsyncEither(Promise.resolve(this as unknown as Either<L, T>))
+    }
     return this as unknown as Either<L, T>
   }
 
-  andThen<T>(_fn: (value: R) => Either<L, T>): Either<L, T> {
+  andThen<T>(
+    fn: (value: R) => Promise<Either<L, T>>
+  ): import("./async-either").AsyncEither<L, T>
+  andThen<T>(fn: (value: R) => Either<L, T>): Either<L, T>
+  andThen<T>(
+    fn: (value: R) => Either<L, T> | Promise<Either<L, T>>
+  ): Either<L, T> | import("./async-either").AsyncEither<L, T> {
+    if (isAsyncFn(fn as (...args: unknown[]) => unknown)) {
+      const { AsyncEither } = require("./async-either")
+      return new AsyncEither(Promise.resolve(this as unknown as Either<L, T>))
+    }
     return this as unknown as Either<L, T>
   }
 
-  transformAsync<T>(_fn: (value: R) => Promise<T>): AsyncEither<L, T> {
-    const { AsyncEither } = require("./async-either")
-    return new AsyncEither(Promise.resolve(this as unknown as Either<L, T>))
-  }
-
-  andThenAsync<T>(_fn: (value: R) => Promise<Either<L, T>>): AsyncEither<L, T> {
-    const { AsyncEither } = require("./async-either")
-    return new AsyncEither(Promise.resolve(this as unknown as Either<L, T>))
+  toMaybe(): import("./maybe").Maybe<R> {
+    const { nothing } = require("./maybe")
+    return nothing<R>()
   }
 
   orDefault<T extends R>(defaultValue: T): R {
@@ -107,22 +139,39 @@ export class Left<L, R = never> extends BaseLeft<L, R> {
 export class Right<R, L = never> extends BaseRight<R, L> {
   declare readonly value: R
 
-  transform<T>(fn: (value: R) => T): Either<L, T> {
-    return right(fn(this.value))
+  transform<T>(
+    fn: (value: R) => Promise<T>
+  ): import("./async-either").AsyncEither<L, T>
+  transform<T>(fn: (value: R) => T): Either<L, T>
+  transform<T>(
+    fn: (value: R) => T | Promise<T>
+  ): Either<L, T> | import("./async-either").AsyncEither<L, T> {
+    const result = fn(this.value)
+    if (result instanceof Promise) {
+      const { AsyncEither } = require("./async-either")
+      return new AsyncEither(result.then((v) => right<T, L>(v)))
+    }
+    return right(result as T) as Either<L, T>
   }
 
-  andThen<T>(fn: (value: R) => Either<L, T>): Either<L, T> {
-    return fn(this.value)
+  andThen<T>(
+    fn: (value: R) => Promise<Either<L, T>>
+  ): import("./async-either").AsyncEither<L, T>
+  andThen<T>(fn: (value: R) => Either<L, T>): Either<L, T>
+  andThen<T>(
+    fn: (value: R) => Either<L, T> | Promise<Either<L, T>>
+  ): Either<L, T> | import("./async-either").AsyncEither<L, T> {
+    const result = fn(this.value)
+    if (result instanceof Promise) {
+      const { AsyncEither } = require("./async-either")
+      return new AsyncEither(result)
+    }
+    return result
   }
 
-  transformAsync<T>(fn: (value: R) => Promise<T>): AsyncEither<L, T> {
-    const { AsyncEither } = require("./async-either")
-    return new AsyncEither(fn(this.value).then((v) => right<T, L>(v)))
-  }
-
-  andThenAsync<T>(fn: (value: R) => Promise<Either<L, T>>): AsyncEither<L, T> {
-    const { AsyncEither } = require("./async-either")
-    return new AsyncEither(fn(this.value))
+  toMaybe(): import("./maybe").Maybe<R> {
+    const { just } = require("./maybe")
+    return just(this.value)
   }
 
   orDefault<T extends R>(_defaultValue: T): R {
