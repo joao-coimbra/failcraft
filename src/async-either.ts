@@ -1,12 +1,11 @@
-import type { Either, EitherMatch, EitherOn } from "./either"
+import { type Either, type EitherMatch, type EitherOn, right } from "./either"
 
 /**
  * A promise-based wrapper around {@link Either} that keeps the same chainable
  * API without requiring `await` at every step.
  *
- * Instances are created automatically by {@link Either.transformAsync},
- * {@link Either.andThenAsync}, {@link tryAsync}, and can be awaited via
- * {@link AsyncEither.toPromise}.
+ * Instances are created automatically by {@link tryAsync}, and can be awaited
+ * via {@link AsyncEither.toPromise}.
  *
  * @typeParam L - The left (error) type.
  * @typeParam R - The right (success) type.
@@ -26,43 +25,44 @@ export class AsyncEither<L, R> {
 
   /**
    * Maps the right value through `fn` once the promise resolves.
-   * Leaves a left untouched.
-   *
-   * @param fn - Synchronous mapping function.
+   * Accepts both sync and async functions; always returns `AsyncEither`.
    */
-  transform<T>(fn: (value: R) => T): AsyncEither<L, T> {
-    return new AsyncEither(this.promise.then((either) => either.transform(fn)))
-  }
-
-  /**
-   * Chains a synchronous computation that returns an `Either`, flattening the result.
-   * Short-circuits on left.
-   *
-   * @param fn - Returns the next `Either` in the chain.
-   */
-  andThen<T>(fn: (value: R) => Either<L, T>): AsyncEither<L, T> {
-    return new AsyncEither(this.promise.then((either) => either.andThen(fn)))
-  }
-
-  /**
-   * Like {@link transform}, but the mapping function returns a `Promise`.
-   *
-   * @param fn - Async mapping function.
-   */
-  transformAsync<T>(fn: (value: R) => Promise<T>): AsyncEither<L, T> {
+  transform<T>(
+    fn: ((value: R) => T) | ((value: R) => Promise<T>)
+  ): AsyncEither<L, T>
+  transform<T>(fn: (value: R) => T | Promise<T>): AsyncEither<L, T> {
     return new AsyncEither(
-      this.promise.then((either) => either.transformAsync(fn).toPromise())
+      this.promise.then((either): Either<L, T> | Promise<Either<L, T>> => {
+        if (!either.isRight()) {
+          return either as unknown as Either<L, T>
+        }
+        const result = fn(either.value)
+        if (result instanceof Promise) {
+          return result.then((v) => right<T, L>(v))
+        }
+        return right<T, L>(result as T)
+      })
     )
   }
 
   /**
-   * Like {@link andThen}, but the chained computation is async.
-   *
-   * @param fn - Returns a `Promise<Either>` for the next step.
+   * Chains a computation returning an `Either`, flattening the result.
+   * Accepts both sync and async functions; always returns `AsyncEither`.
+   * Short-circuits on left.
    */
-  andThenAsync<T>(fn: (value: R) => Promise<Either<L, T>>): AsyncEither<L, T> {
+  andThen<T>(
+    fn: ((value: R) => Either<L, T>) | ((value: R) => Promise<Either<L, T>>)
+  ): AsyncEither<L, T>
+  andThen<T>(
+    fn: (value: R) => Either<L, T> | Promise<Either<L, T>>
+  ): AsyncEither<L, T> {
     return new AsyncEither(
-      this.promise.then((either) => either.andThenAsync(fn).toPromise())
+      this.promise.then((either): Either<L, T> | Promise<Either<L, T>> => {
+        if (!either.isRight()) {
+          return either as unknown as Either<L, T>
+        }
+        return fn(either.value)
+      })
     )
   }
 
@@ -109,3 +109,14 @@ export class AsyncEither<L, R> {
     return this.promise
   }
 }
+
+/**
+ * Wraps a `Promise<Either<L, R>>` into an {@link AsyncEither} for fluent chaining.
+ *
+ * @example
+ * await from(findUser(1))
+ *   .transform(u => u.email)
+ *   .getOrThrow() // Promise<string>
+ */
+export const from = <L, R>(promise: Promise<Either<L, R>>): AsyncEither<L, R> =>
+  new AsyncEither(promise)
