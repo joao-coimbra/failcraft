@@ -72,8 +72,8 @@ export class AsyncEither<L, R> {
    *
    * @param cases - Both `left` and `right` handlers must be provided.
    */
-  match<T>(cases: EitherMatch<L, R, T>): Promise<T> {
-    return this.promise.then((either) => either.match(cases))
+  async match<T>(cases: EitherMatch<L, R, T>): Promise<T> {
+    return (await this.promise).match(cases)
   }
 
   /**
@@ -81,8 +81,8 @@ export class AsyncEither<L, R> {
    *
    * @param defaultValue - Fallback value, must be assignable to `R`.
    */
-  orDefault<T extends R>(defaultValue: T): Promise<R> {
-    return this.promise.then((either) => either.orDefault(defaultValue))
+  async orDefault<T extends R>(defaultValue: T): Promise<R> {
+    return (await this.promise).orDefault(defaultValue)
   }
 
   /**
@@ -90,8 +90,8 @@ export class AsyncEither<L, R> {
    *
    * @throws The left value.
    */
-  getOrThrow(): Promise<R> {
-    return this.promise.then((either) => either.getOrThrow())
+  async getOrThrow(): Promise<R> {
+    return (await this.promise).getOrThrow()
   }
 
   /**
@@ -100,14 +100,11 @@ export class AsyncEither<L, R> {
    * @param fn - Transforms the left value into the thrown error.
    * @throws The return value of `fn`.
    */
-  getOrThrowWith(fn: (value: L) => unknown): Promise<R> {
-    return this.promise.then((either) => either.getOrThrowWith(fn))
+  async getOrThrowWith(fn: (value: L) => unknown): Promise<R> {
+    return (await this.promise).getOrThrowWith(fn)
   }
 
-  /**
-   * Unwraps the underlying `Promise<Either<L, R>>` for interop with
-   * non-chainable async contexts.
-   */
+  /** @internal */
   toPromise(): Promise<Either<L, R>> {
     return this.promise
   }
