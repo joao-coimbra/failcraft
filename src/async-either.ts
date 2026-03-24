@@ -113,10 +113,26 @@ export class AsyncEither<L, R> {
 /**
  * Wraps a `Promise<Either<L, R>>` into an {@link AsyncEither} for fluent chaining.
  *
+ * Use `from()` when you already have a `Promise<Either>` — typically the return
+ * value of an `async` function — and want to keep chaining `transform`, `andThen`,
+ * or other methods without intermediate `await` calls.
+ *
+ * The Promise stays hidden inside `AsyncEither` for the whole chain.
+ * Every terminator (`orDefault`, `getOrThrow`, `match`) resolves it and returns
+ * a `Promise<T>`, which you `await` once at the very end.
+ *
  * @example
- * await from(findUser(1))
- *   .transform(u => u.email)
- *   .getOrThrow() // Promise<string>
+ * // Chain multiple async sources with a single await
+ * const name = await from(findUser(1))
+ *   .andThen(user => findProfile(user.id))
+ *   .transform(profile => profile.name)
+ *   .orDefault("anonymous")
+ *
+ * @example
+ * // Also works with tryAsync
+ * const data = await from(tryAsync(() => fetch("/api").then(r => r.json())))
+ *   .transform(d => d.items)
+ *   .orDefault([])
  */
 export const from = <L, R>(promise: Promise<Either<L, R>>): AsyncEither<L, R> =>
   new AsyncEither(promise)

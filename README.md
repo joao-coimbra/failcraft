@@ -58,6 +58,22 @@ result.isSuccess() // same as isRight()
 result.isError()   // same as isLeft()
 ```
 
+> **Tip:** Always annotate the return type of functions that return `Either` through multiple branches. Without it, TypeScript infers a union of asymmetric types (`Either<"err", never> | Either<never, number>`) that breaks method calls.
+>
+> ```ts
+> // ❌ infers Either<"err", never> | Either<never, number>
+> function parse(s: string) {
+>   if (!s) return left("empty")
+>   return right(Number(s))
+> }
+>
+> // ✅ explicit return type collapses the union
+> function parse(s: string): Either<"empty", number> {
+>   if (!s) return left("empty")
+>   return right(Number(s))
+> }
+> ```
+
 ---
 
 ## Chaining
@@ -86,31 +102,50 @@ divide(10, 2)
 
 ## Async
 
-`transform()` and `andThen()` are overloaded — pass an async function and the chain automatically becomes an `AsyncEither<L, R>`:
+Pass an async function to `transform()` or `andThen()` and the chain automatically becomes an `AsyncEither<L, R>`. The key rule: **`await` goes once at the end of the chain**, not on each step.
 
 ```ts
-import { right, from } from 'failcraft'
+import { right } from 'failcraft'
 
-// Async fn triggers the overload → returns AsyncEither
-right(1)
+const name = await right(1)
   .transform(async (n) => fetchUser(n))    // Either → AsyncEither
-  .andThen(async (user) => saveUser(user)) // async chain
-  .transform((user) => user.name)          // sync step mid-chain
-  .match({
-    left: (err) => `Error: ${err}`,
-    right: (name) => `Saved: ${name}`,
-  })
-  // returns Promise<string>
+  .andThen(async (user) => saveUser(user)) // still AsyncEither
+  .transform((user) => user.name)          // sync step, still AsyncEither
+  .orDefault("anonymous")
+  // Promise<string> → await once here → string ✅
 ```
 
-Use `from()` to wrap an existing `Promise<Either>` into the chainable `AsyncEither` API:
+The Promise is kept inside `AsyncEither` during the whole chain. Every terminator — `orDefault`, `getOrThrow`, `match` — resolves it and returns `Promise<T>`, which you `await` at the end.
+
+### `from()` — entry point for `Promise<Either>`
+
+When you already have a `Promise<Either>` (e.g. from an async function or `tryAsync`) and want to keep chaining, use `from()` to wrap it into `AsyncEither`:
 
 ```ts
 import { from } from 'failcraft'
 
-const result = await from(fetchEither())
-  .transform(n => n * 2)
-  .toPromise()
+async function findUser(id: number): Promise<Either<"not_found", User>> { ... }
+async function findProfile(id: number): Promise<Either<"no_profile", Profile>> { ... }
+
+// from() lets you chain without intermediate awaits
+const name = await from(findUser(1))
+  .andThen(user => findProfile(user.id))   // Promise<Either> accepted directly
+  .transform(profile => profile.name)
+  .orDefault("anonymous")
+```
+
+**When to use which pattern:**
+
+```ts
+// Long chain with multiple async steps → from() + single await at the end
+const name = await from(findUser(1))
+  .andThen(u => findProfile(u.id))
+  .transform(p => p.name.toUpperCase())
+  .orDefault("anonymous")
+
+// Single async source, rest is sync → await the source directly
+const result = await findUser(1)          // Either<"not_found", User>
+result.transform(u => u.name).orDefault("anonymous")
 ```
 
 ---
@@ -233,7 +268,7 @@ Same interface as `Either` but every method returns `AsyncEither` or `Promise`. 
 
 ### `from(promise)`
 
-Wraps a `Promise<Either<L, R>>` into a chainable `AsyncEither<L, R>`.
+Wraps a `Promise<Either<L, R>>` into a chainable `AsyncEither<L, R>`. Use this as the entry point whenever you have a `Promise<Either>` from an `async` function or `tryAsync` and want to continue chaining without intermediate `await` calls. The `await` goes once at the very end on the terminator (`orDefault`, `getOrThrow`, `match`).
 
 ### `Maybe<T>`
 
