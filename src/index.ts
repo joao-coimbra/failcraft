@@ -4,12 +4,12 @@
 // transform(async fn) or andThen(async fn) is called on Either.
 // Use from() as the explicit entry-point when wrapping a Promise<Either>.
 export type { AsyncEither } from "./async-either"
-export { from } from "./async-either"
 // AsyncMaybe — exported as type only; same pattern as AsyncEither.
 export type { AsyncMaybe } from "./async-maybe"
 export { attempt } from "./attempt"
 export type { Either, Left, Right } from "./either"
 export { left, right } from "./either"
+export { from } from "./from"
 // Maybe
 export type { Just, Maybe, Nothing } from "./maybe"
 export { just, maybe, nothing } from "./maybe"
