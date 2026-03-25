@@ -1,7 +1,7 @@
 {
   "name": "failcraft",
   "description": "Functional error handling for TypeScript — type-safe Either, Maybe, and Result with composable async chains.",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "type": "module",
   "private": false,
   "files": [
