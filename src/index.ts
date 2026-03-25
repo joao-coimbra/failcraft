@@ -8,8 +8,6 @@ export { from } from "./async-either"
 // AsyncMaybe — exported as type only; same pattern as AsyncEither.
 export type { AsyncMaybe } from "./async-maybe"
 export { attempt } from "./attempt"
-export type { EitherMatch, EitherOn } from "./base-either"
-export type { MaybeMatch, MaybeOn } from "./base-maybe"
 export type { Either, Left, Right } from "./either"
 export { left, right } from "./either"
 // Maybe

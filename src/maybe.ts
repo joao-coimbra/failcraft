@@ -1,8 +1,18 @@
 import { AsyncMaybe } from "./async-maybe"
-import { BaseJust, BaseMaybe, BaseNothing } from "./base-maybe"
 import { type Either, left, right } from "./either"
 
-export type { MaybeMatch, MaybeOn } from "./base-maybe"
+/**
+ * Handlers for both branches of a Maybe, each returning a value of type `U`.
+ */
+export interface MaybeMatch<T, U> {
+  just: (value: T) => U
+  nothing: () => U
+}
+
+/**
+ * Optional side-effect handlers for a Maybe's branches.
+ */
+export type MaybeOn<T> = Partial<MaybeMatch<T, void>>
 
 // biome-ignore lint/suspicious/noEmptyBlockStatements: needed to obtain AsyncFunction constructor
 const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor as new (
@@ -29,7 +39,21 @@ function isAsyncFn(fn: (...args: unknown[]) => unknown): boolean {
  * A synchronous discriminated union representing either a present value (`Just`)
  * or absence (`Nothing`).
  */
-export abstract class Maybe<T> extends BaseMaybe<T> {
+export abstract class Maybe<T> {
+  abstract readonly value: T | undefined
+
+  abstract isJust(): this is Just<T>
+
+  hasValue(): this is Just<T> {
+    return this.isJust()
+  }
+
+  abstract isNothing(): this is Nothing
+
+  abstract on(cases: MaybeOn<T>): this
+
+  abstract match<U>(cases: MaybeMatch<T, U>): U
+
   /**
    * Maps the value through `fn`, leaving Nothing untouched.
    * Pass an async function to automatically get an {@link AsyncMaybe} back.
@@ -60,8 +84,27 @@ export abstract class Maybe<T> extends BaseMaybe<T> {
   abstract toEither<L>(leftValue: L): Either<L, T>
 }
 
-export class Just<T> extends BaseJust<T> {
-  declare readonly value: T
+export class Just<T> extends Maybe<T> {
+  constructor(readonly value: T) {
+    super()
+  }
+
+  isJust(): this is Just<T> {
+    return true
+  }
+
+  isNothing(): this is Nothing {
+    return false
+  }
+
+  on(cases: MaybeOn<T>): this {
+    cases.just?.(this.value)
+    return this
+  }
+
+  match<U>(cases: MaybeMatch<T, U>): U {
+    return cases.just(this.value)
+  }
 
   transform<U>(fn: (value: T) => Promise<U>): AsyncMaybe<U>
   transform<U>(fn: (value: T) => U): Maybe<U>
@@ -106,7 +149,26 @@ export class Just<T> extends BaseJust<T> {
   }
 }
 
-export class Nothing extends BaseNothing<never> {
+export class Nothing extends Maybe<never> {
+  readonly value: undefined = undefined
+
+  isJust(): this is Just<never> {
+    return false
+  }
+
+  isNothing(): this is Nothing {
+    return true
+  }
+
+  on(cases: MaybeOn<never>): this {
+    cases.nothing?.()
+    return this
+  }
+
+  match<U>(cases: MaybeMatch<never, U>): U {
+    return cases.nothing()
+  }
+
   transform<U>(fn: (value: never) => Promise<U>): AsyncMaybe<U>
   transform<U>(fn: (value: never) => U): Maybe<U>
   transform<U>(fn: (value: never) => U | Promise<U>): Maybe<U> | AsyncMaybe<U> {

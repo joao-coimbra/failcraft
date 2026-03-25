@@ -1,8 +1,20 @@
 import { AsyncEither } from "./async-either"
-import { BaseEither, BaseLeft, BaseRight } from "./base-either"
 import { just, type Maybe, nothing } from "./maybe"
 
-export type { EitherMatch, EitherOn } from "./base-either"
+/**
+ * Handlers for both branches of an Either, each returning a value of type `T`.
+ * Used by {@link Either.match} to exhaustively handle left and right cases.
+ */
+export interface EitherMatch<L, R, T> {
+  left: (value: L) => T
+  right: (value: R) => T
+}
+
+/**
+ * Optional side-effect handlers for an Either's branches.
+ * Used by {@link Either.on} to react to a value without transforming it.
+ */
+export type EitherOn<L, R> = Partial<EitherMatch<L, R, void>>
 
 const AsyncFunction = Object.getPrototypeOf(
   // biome-ignore lint/suspicious/noEmptyBlockStatements: needed to get AsyncFunction constructor
@@ -36,7 +48,41 @@ function isAsyncFn(fn: (...args: unknown[]) => unknown): boolean {
  * @typeParam L - The left (error) type.
  * @typeParam R - The right (success) type.
  */
-export abstract class Either<L, R> extends BaseEither<L, R> {
+export abstract class Either<L, R> {
+  abstract readonly value: L | R
+
+  /** Returns `true` and narrows to `Left` when this is a left value. */
+  abstract isLeft(): this is Left<L, R>
+
+  /** Returns `true` and narrows to `Right` when this is a right value. */
+  abstract isRight(): this is Right<R, L>
+
+  /** Alias for {@link isLeft} — semantically signals an error path. */
+  isError(): this is Left<L, R> {
+    return this.isLeft()
+  }
+
+  /** Alias for {@link isRight} — semantically signals a success path. */
+  isSuccess(): this is Right<R, L> {
+    return this.isRight()
+  }
+
+  /**
+   * Runs the matching side-effect handler for whichever branch this is,
+   * then returns `this` unchanged — useful for logging or debugging mid-chain.
+   *
+   * @param cases - Partial handlers; omit a branch to ignore it.
+   */
+  abstract on(cases: EitherOn<L, R>): this
+
+  /**
+   * Exhaustively pattern-matches this Either, returning the result of
+   * whichever branch handler is called.
+   *
+   * @param cases - Both `left` and `right` handlers must be provided.
+   */
+  abstract match<T>(cases: EitherMatch<L, R, T>): T
+
   /**
    * Maps the right value through `fn`, leaving a left untouched.
    * Pass an async function to automatically get an {@link AsyncEither} back.
@@ -87,8 +133,27 @@ export abstract class Either<L, R> extends BaseEither<L, R> {
   abstract getOrThrowWith(fn: (value: L) => unknown): R
 }
 
-export class Left<L, R = never> extends BaseLeft<L, R> {
-  declare readonly value: L
+export class Left<L, R = never> extends Either<L, R> {
+  constructor(readonly value: L) {
+    super()
+  }
+
+  isLeft(): this is Left<L, R> {
+    return true
+  }
+
+  isRight(): this is Right<R, L> {
+    return false
+  }
+
+  on(cases: EitherOn<L, R>): this {
+    cases.left?.(this.value)
+    return this
+  }
+
+  match<T>(cases: EitherMatch<L, R, T>): T {
+    return cases.left(this.value)
+  }
 
   transform<T>(fn: (value: R) => Promise<T>): AsyncEither<L, T>
   transform<T>(fn: (value: R) => T): Either<L, T>
@@ -129,8 +194,27 @@ export class Left<L, R = never> extends BaseLeft<L, R> {
   }
 }
 
-export class Right<R, L = never> extends BaseRight<R, L> {
-  declare readonly value: R
+export class Right<R, L = never> extends Either<L, R> {
+  constructor(readonly value: R) {
+    super()
+  }
+
+  isLeft(): this is Left<L, R> {
+    return false
+  }
+
+  isRight(): this is Right<R, L> {
+    return true
+  }
+
+  on(cases: EitherOn<L, R>): this {
+    cases.right?.(this.value)
+    return this
+  }
+
+  match<T>(cases: EitherMatch<L, R, T>): T {
+    return cases.right(this.value)
+  }
 
   transform<T>(fn: (value: R) => Promise<T>): AsyncEither<L, T>
   transform<T>(fn: (value: R) => T): Either<L, T>
