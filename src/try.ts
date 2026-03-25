@@ -10,7 +10,10 @@ import { type Either, left, right } from "./either"
  * const result = trySync(() => JSON.parse(raw))
  * // Either<unknown, ParsedType>
  */
-export const trySync = <const L = unknown, const R = unknown>(
+/**
+ * @deprecated Use {@link attempt} instead — it handles both sync and async in a single call.
+ */
+export const trySync = <L = unknown, R = unknown>(
   fn: () => R
 ): Either<L, R> => {
   try {
@@ -30,7 +33,10 @@ export const trySync = <const L = unknown, const R = unknown>(
  * const result = await tryAsync(() => fetch("/api/data").then(r => r.json()))
  * // Either<unknown, Data>
  */
-export const tryAsync = <const L = unknown, const R = unknown>(
+/**
+ * @deprecated Use {@link attempt} instead — it handles both sync and async in a single call.
+ */
+export const tryAsync = <L = unknown, R = unknown>(
   fn: () => Promise<R>
 ): Promise<Either<L, R>> =>
   fn()

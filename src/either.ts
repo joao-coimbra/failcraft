@@ -1,4 +1,4 @@
-import type { AsyncEither } from "./async-either"
+import { AsyncEither } from "./async-either"
 import { BaseEither, BaseLeft, BaseRight } from "./base-either"
 import { just, type Maybe, nothing } from "./maybe"
 
@@ -96,7 +96,6 @@ export class Left<L, R = never> extends BaseLeft<L, R> {
     fn: (value: R) => T | Promise<T>
   ): Either<L, T> | AsyncEither<L, T> {
     if (isAsyncFn(fn as (...args: unknown[]) => unknown)) {
-      const { AsyncEither } = require("./async-either")
       return new AsyncEither(Promise.resolve(this as unknown as Either<L, T>))
     }
     return this as unknown as Either<L, T>
@@ -108,7 +107,6 @@ export class Left<L, R = never> extends BaseLeft<L, R> {
     fn: (value: R) => Either<L, T> | Promise<Either<L, T>>
   ): Either<L, T> | AsyncEither<L, T> {
     if (isAsyncFn(fn as (...args: unknown[]) => unknown)) {
-      const { AsyncEither } = require("./async-either")
       return new AsyncEither(Promise.resolve(this as unknown as Either<L, T>))
     }
     return this as unknown as Either<L, T>
@@ -141,7 +139,6 @@ export class Right<R, L = never> extends BaseRight<R, L> {
   ): Either<L, T> | AsyncEither<L, T> {
     const result = fn(this.value)
     if (result instanceof Promise) {
-      const { AsyncEither } = require("./async-either")
       return new AsyncEither(result.then((v) => right<T, L>(v)))
     }
     return right(result as T) as Either<L, T>
@@ -154,7 +151,6 @@ export class Right<R, L = never> extends BaseRight<R, L> {
   ): Either<L, T> | AsyncEither<L, T> {
     const result = fn(this.value)
     if (result instanceof Promise) {
-      const { AsyncEither } = require("./async-either")
       return new AsyncEither(result)
     }
     return result
