@@ -48,7 +48,7 @@ export abstract class Maybe<T> extends BaseMaybe<T> {
   /** Returns `just(value)` when predicate passes, `nothing()` when it fails. */
   abstract filter(predicate: (value: T) => boolean): Maybe<T>
   /** Returns the value if Just, otherwise returns `defaultValue`. */
-  abstract orDefault<U extends T>(defaultValue: U): T
+  abstract orDefault(defaultValue: T): T
   /** Returns the value if Just, otherwise returns `undefined`. */
   abstract orNothing(): T | undefined
   /** Returns the value if Just, otherwise throws `error`. */
@@ -89,7 +89,7 @@ export class Just<T> extends BaseJust<T> {
     return predicate(this.value) ? this : nothing()
   }
 
-  orDefault<U extends T>(_defaultValue: U): T {
+  orDefault(_defaultValue: T): T {
     return this.value
   }
 
@@ -133,7 +133,7 @@ export class Nothing extends BaseNothing<never> {
     return this as unknown as Maybe<never>
   }
 
-  orDefault<U extends never>(defaultValue: U): never {
+  orDefault(defaultValue: never): never {
     return defaultValue
   }
 
