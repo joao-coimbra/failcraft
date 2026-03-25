@@ -17,7 +17,7 @@
 
 <br />
 
-[Install](#install) · [Either](#either) · [Chaining](#chaining) · [Async](#async) · [Maybe](#maybe) · [Result](#result) · [Try helpers](#try-helpers) · [API](#api)
+[Install](#install) · [Either](#either) · [Chaining](#chaining) · [Async](#async) · [Maybe](#maybe) · [Result](#result) · [Try helpers](#try-helpers) · [Attempt](#attempt) · [API](#api)
 
 <br />
 
@@ -237,6 +237,31 @@ data
 
 ---
 
+## Attempt
+
+`attempt()` is a unified try/catch wrapper that automatically detects whether the function is sync or async, and accepts an optional `mapError` to transform the caught value:
+
+```ts
+import { attempt } from 'failcraft'
+
+// Sync — returns Either<unknown, unknown>
+const parsed = attempt(() => JSON.parse(rawJson))
+
+// Async — returns AsyncEither<unknown, Data>
+const data = await attempt(async () => fetch("/api/data").then(r => r.json()))
+
+// With error mapping — narrow the left type
+const user = await attempt(
+  () => db.users.findOne(id),
+  (err) => err instanceof DatabaseError ? err.code : "UNKNOWN"
+)
+// AsyncEither<string, User>
+```
+
+Use `attempt()` when you want a single import that handles both sync and async throws with optional error shaping. Use `trySync`/`tryAsync` for simpler cases where you don't need error mapping.
+
+---
+
 ## API
 
 ### `left(value)` / `right(value)`
@@ -268,7 +293,7 @@ Same interface as `Either` but every method returns `AsyncEither` or `Promise`. 
 
 ### `from(promise)`
 
-Wraps a `Promise<Either<L, R>>` into a chainable `AsyncEither<L, R>`. Use this as the entry point whenever you have a `Promise<Either>` from an `async` function or `tryAsync` and want to continue chaining without intermediate `await` calls. The `await` goes once at the very end on the terminator (`orDefault`, `getOrThrow`, `match`).
+Wraps a `Promise<Either<L, R>>` into a chainable `AsyncEither<L, R>`, or a `Promise<Maybe<T>>` into a chainable `AsyncMaybe<T>`. Use this as the entry point whenever you have a `Promise<Either>` or `Promise<Maybe>` from an `async` function and want to keep chaining without intermediate `await` calls. The `await` goes once at the very end on the terminator (`orDefault`, `getOrThrow`, `match`).
 
 ### `Maybe<T>`
 
@@ -304,6 +329,10 @@ Type alias: `Result<T, E>` ≡ `Either<E, T>`. Use with `ok(value)` / `err(error
 ### `trySync(fn)` / `tryAsync(fn)`
 
 Wrap a possibly-throwing function. `trySync` returns `Either`, `tryAsync` returns `Promise<Either>`.
+
+### `attempt(fn, mapError?)`
+
+Unified try/catch wrapper that auto-detects sync vs async from the function signature. Returns `Either<L, R>` for sync functions and `AsyncEither<L, R>` for async ones. The optional `mapError` transforms the caught `unknown` error into the left type `L`.
 
 ---
 
