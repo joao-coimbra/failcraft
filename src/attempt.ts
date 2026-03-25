@@ -28,11 +28,10 @@ function isAsyncFn(fn: (...args: unknown[]) => unknown): boolean {
  * Pass an async function (or one that returns a `Promise`) to get an `AsyncEither` back.
  *
  * An optional `mapError` second argument lets you transform the caught error
- * before it becomes the left value. The error parameter defaults to `Error`,
- * but you can annotate it with a custom subclass to access specific properties.
+ * before it becomes the left value.
  *
  * @param fn - A function that may throw or reject.
- * @param mapError - Optional. Maps the caught error to the left type `L`.
+ * @param mapError - Optional. Maps the caught `unknown` error to the left type `L`.
  *
  * @example
  * // Sync — returns Either
@@ -45,32 +44,27 @@ function isAsyncFn(fn: (...args: unknown[]) => unknown): boolean {
  * // AsyncEither<unknown, Data>
  *
  * @example
- * // With error mapping (err is Error by default)
- * attempt(() => JSON.parse(raw), (err) => err.message)
- * // Either<string, unknown>
- *
- * @example
- * // With a custom error subclass
+ * // With error mapping
  * attempt(
  *   () => db.users.findOne(id),
- *   (err: DatabaseError) => ({ code: err.code, message: err.message })
+ *   (err) => err instanceof DatabaseError ? err.code : "UNKNOWN"
  * )
- * // AsyncEither<{ code: string; message: string }, User>
+ * // AsyncEither<string, User>
  */
-export function attempt<L = unknown, R = unknown, E extends Error = Error>(
+export function attempt<L = unknown, R = unknown>(
   fn: () => Promise<R>,
-  mapError?: (error: E) => L
+  mapError?: (error: unknown) => L
 ): AsyncEither<L, R>
-export function attempt<L = unknown, R = unknown, E extends Error = Error>(
+export function attempt<L = unknown, R = unknown>(
   fn: () => R,
-  mapError?: (error: E) => L
+  mapError?: (error: unknown) => L
 ): Either<L, R>
-export function attempt<L = unknown, R = unknown, E extends Error = Error>(
+export function attempt<L = unknown, R = unknown>(
   fn: () => R | Promise<R>,
-  mapError?: (error: E) => L
+  mapError?: (error: unknown) => L
 ): Either<L, R> | AsyncEither<L, R> {
   const toLeft = (error: unknown): L =>
-    mapError ? mapError(error as E) : (error as L)
+    mapError ? mapError(error) : (error as L)
 
   if (isAsyncFn(fn as (...args: unknown[]) => unknown)) {
     return new AsyncEither(
