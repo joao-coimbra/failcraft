@@ -73,7 +73,14 @@ export abstract class Either<L, R> {
    *
    * @param cases - Partial handlers; omit a branch to ignore it.
    */
-  abstract on(cases: EitherOn<L, R>): this
+  on(cases: EitherOn<L, R>): this {
+    if (this.isLeft()) {
+      cases.left?.(this.value as L)
+    } else {
+      cases.right?.(this.value as R)
+    }
+    return this
+  }
 
   /**
    * Exhaustively pattern-matches this Either, returning the result of
@@ -146,11 +153,6 @@ export class Left<L, R = never> extends Either<L, R> {
     return false
   }
 
-  on(cases: EitherOn<L, R>): this {
-    cases.left?.(this.value)
-    return this
-  }
-
   match<T>(cases: EitherMatch<L, R, T>): T {
     return cases.left(this.value)
   }
@@ -205,11 +207,6 @@ export class Right<R, L = never> extends Either<L, R> {
 
   isRight(): this is Right<R, L> {
     return true
-  }
-
-  on(cases: EitherOn<L, R>): this {
-    cases.right?.(this.value)
-    return this
   }
 
   match<T>(cases: EitherMatch<L, R, T>): T {

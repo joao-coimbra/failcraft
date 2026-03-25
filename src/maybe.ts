@@ -52,7 +52,14 @@ export abstract class Maybe<T> {
     return !this.isJust()
   }
 
-  abstract on(cases: MaybeOn<T>): this
+  on(cases: MaybeOn<T>): this {
+    if (this.isJust()) {
+      cases.just?.(this.value)
+    } else {
+      cases.nothing?.()
+    }
+    return this
+  }
 
   abstract match<U>(cases: MaybeMatch<T, U>): U
 
@@ -93,11 +100,6 @@ export class Just<T> extends Maybe<T> {
 
   isJust(): this is Just<T> {
     return true
-  }
-
-  on(cases: MaybeOn<T>): this {
-    cases.just?.(this.value)
-    return this
   }
 
   match<U>(cases: MaybeMatch<T, U>): U {
@@ -152,11 +154,6 @@ export class Nothing extends Maybe<never> {
 
   isJust(): this is Just<never> {
     return false
-  }
-
-  on(cases: MaybeOn<never>): this {
-    cases.nothing?.()
-    return this
   }
 
   match<U>(cases: MaybeMatch<never, U>): U {
