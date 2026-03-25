@@ -4,8 +4,10 @@ import { type Either, type EitherMatch, type EitherOn, right } from "./either"
  * A promise-based wrapper around {@link Either} that keeps the same chainable
  * API without requiring `await` at every step.
  *
- * Instances are created automatically by {@link tryAsync}, and can be awaited
- * via {@link AsyncEither.toPromise}.
+ * Created automatically when an async function is passed to `transform` or
+ * `andThen`, or when using {@link attempt} with an async function.
+ * Use {@link from} as the explicit entry point when wrapping an existing
+ * `Promise<Either>`.
  *
  * @typeParam L - The left (error) type.
  * @typeParam R - The right (success) type.
