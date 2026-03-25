@@ -69,7 +69,7 @@ export abstract class Either<L, R> extends BaseEither<L, R> {
    *
    * @param defaultValue - Fallback value, must be assignable to `R`.
    */
-  abstract orDefault<T extends R>(defaultValue: T): R
+  abstract orDefault(defaultValue: R): R
 
   /**
    * Unwraps the right value, or throws the left value directly if this is a left.
@@ -116,7 +116,7 @@ export class Left<L, R = never> extends BaseLeft<L, R> {
     return nothing()
   }
 
-  orDefault<T extends R>(defaultValue: T): R {
+  orDefault(defaultValue: R): R {
     return defaultValue
   }
 
@@ -160,7 +160,7 @@ export class Right<R, L = never> extends BaseRight<R, L> {
     return just(this.value)
   }
 
-  orDefault<T extends R>(_defaultValue: T): R {
+  orDefault(_defaultValue: R): R {
     return this.value
   }
 
