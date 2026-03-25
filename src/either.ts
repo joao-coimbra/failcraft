@@ -183,8 +183,7 @@ export class Right<R, L = never> extends BaseRight<R, L> {
  * @example
  * const result = left("not found") // Either<string, never>
  */
-export const left = <const L, R = never>(value: L): Either<L, R> =>
-  new Left(value)
+export const left = <L, R = never>(value: L): Left<L, R> => new Left(value)
 
 /**
  * Creates a `Right` (success) instance of `Either`.
@@ -192,5 +191,4 @@ export const left = <const L, R = never>(value: L): Either<L, R> =>
  * @example
  * const result = right(42) // Either<never, number>
  */
-export const right = <const R, L = never>(value: R): Either<L, R> =>
-  new Right(value)
+export const right = <R, L = never>(value: R): Right<R, L> => new Right(value)

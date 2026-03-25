@@ -58,10 +58,10 @@ result.isSuccess() // same as isRight()
 result.isError()   // same as isLeft()
 ```
 
-> **Tip:** Always annotate the return type of functions that return `Either` through multiple branches. Without it, TypeScript infers a union of asymmetric types (`Either<"err", never> | Either<never, number>`) that breaks method calls.
+> **Tip:** Always annotate the return type of functions that return `Either` through multiple branches. Without it, TypeScript infers a union of asymmetric types (`Left<"empty", never> | Right<number, never>`) that breaks method calls.
 >
 > ```ts
-> // ❌ infers Either<"err", never> | Either<never, number>
+> // ❌ infers Left<"empty", never> | Right<number, never>
 > function parse(s: string) {
 >   if (!s) return left("empty")
 >   return right(Number(s))
@@ -241,7 +241,7 @@ data
 
 ### `left(value)` / `right(value)`
 
-Constructors for `Either<L, R>`.
+Constructors that return `Left<L, R>` and `Right<R, L>` respectively. Both are subtypes of `Either<L, R>`, so the full `Either` API is always available.
 
 ### `Either<L, R>`
 
@@ -287,7 +287,7 @@ Wraps a `Promise<Either<L, R>>` into a chainable `AsyncEither<L, R>`. Use this a
 
 ### `maybe(value)` / `just(value)` / `nothing()`
 
-Constructors for `Maybe<T>`. `maybe()` maps `null`/`undefined` to `Nothing`, everything else to `Just`.
+`just(value)` returns `Just<T>`, `nothing()` returns `Nothing`, and `maybe(value)` returns `Maybe<NonNullable<T>>` — mapping `null`/`undefined` to `Nothing`, everything else to `Just`.
 
 ### `AsyncMaybe<T>`
 
