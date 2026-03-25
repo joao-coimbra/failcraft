@@ -157,10 +157,10 @@ export class Nothing extends BaseNothing<never> {
 }
 
 /** Creates a `Just` (present value) instance of `Maybe`. */
-export const just = <T>(value: T): Maybe<T> => new Just(value)
+export const just = <T>(value: T): Just<T> => new Just(value)
 
 /** Creates a `Nothing` (absent value) instance of `Maybe`. */
-export const nothing = (): Maybe<never> => new Nothing()
+export const nothing = (): Nothing => new Nothing()
 
 /**
  * Creates a `Maybe` from a nullable value.
