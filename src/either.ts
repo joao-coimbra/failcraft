@@ -115,7 +115,7 @@ export class Left<L, R = never> extends BaseLeft<L, R> {
   }
 
   toMaybe(): Maybe<R> {
-    return nothing<R>()
+    return nothing()
   }
 
   orDefault<T extends R>(defaultValue: T): R {

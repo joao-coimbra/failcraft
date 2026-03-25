@@ -109,10 +109,10 @@ export class Just<T> extends BaseJust<T> {
   }
 }
 
-export class Nothing<T = never> extends BaseNothing<T> {
-  transform<U>(fn: (value: T) => Promise<U>): AsyncMaybe<U>
-  transform<U>(fn: (value: T) => U): Maybe<U>
-  transform<U>(fn: (value: T) => U | Promise<U>): Maybe<U> | AsyncMaybe<U> {
+export class Nothing extends BaseNothing<never> {
+  transform<U>(fn: (value: never) => Promise<U>): AsyncMaybe<U>
+  transform<U>(fn: (value: never) => U): Maybe<U>
+  transform<U>(fn: (value: never) => U | Promise<U>): Maybe<U> | AsyncMaybe<U> {
     // Note: () => Promise.resolve(...) without async keyword is not detected here.
     // Use async () => ... for reliable async detection on Nothing.
     if (isAsyncFn(fn as (...args: unknown[]) => unknown)) {
@@ -122,10 +122,10 @@ export class Nothing<T = never> extends BaseNothing<T> {
     return this as unknown as Maybe<U>
   }
 
-  andThen<U>(fn: (value: T) => Promise<Maybe<U>>): AsyncMaybe<U>
-  andThen<U>(fn: (value: T) => Maybe<U>): Maybe<U>
+  andThen<U>(fn: (value: never) => Promise<Maybe<U>>): AsyncMaybe<U>
+  andThen<U>(fn: (value: never) => Maybe<U>): Maybe<U>
   andThen<U>(
-    fn: (value: T) => Maybe<U> | Promise<Maybe<U>>
+    fn: (value: never) => Maybe<U> | Promise<Maybe<U>>
   ): Maybe<U> | AsyncMaybe<U> {
     if (isAsyncFn(fn as (...args: unknown[]) => unknown)) {
       const { AsyncMaybe } = require("./async-maybe")
@@ -134,11 +134,11 @@ export class Nothing<T = never> extends BaseNothing<T> {
     return this as unknown as Maybe<U>
   }
 
-  filter(_predicate: (value: T) => boolean): Maybe<T> {
-    return this
+  filter(_predicate: (value: never) => boolean): Maybe<never> {
+    return this as unknown as Maybe<never>
   }
 
-  orDefault<U extends T>(defaultValue: U): T {
+  orDefault<U extends never>(defaultValue: U): never {
     return defaultValue
   }
 
@@ -146,11 +146,11 @@ export class Nothing<T = never> extends BaseNothing<T> {
     return undefined
   }
 
-  orThrow(error?: unknown): T {
+  orThrow(error?: unknown): never {
     throw error
   }
 
-  toEither<L>(leftValue: L): Either<L, T> {
+  toEither<L>(leftValue: L): Either<L, never> {
     const { left } = require("./either")
     return left(leftValue)
   }
@@ -160,7 +160,7 @@ export class Nothing<T = never> extends BaseNothing<T> {
 export const just = <T>(value: T): Maybe<T> => new Just(value)
 
 /** Creates a `Nothing` (absent value) instance of `Maybe`. */
-export const nothing = <T = never>(): Maybe<T> => new Nothing<T>()
+export const nothing = (): Maybe<never> => new Nothing()
 
 /**
  * Creates a `Maybe` from a nullable value.
@@ -172,4 +172,4 @@ export const nothing = <T = never>(): Maybe<T> => new Nothing<T>()
  * maybe(null)            // nothing()
  */
 export const maybe = <T>(value: T | null | undefined): Maybe<NonNullable<T>> =>
-  value == null ? nothing<NonNullable<T>>() : just(value as NonNullable<T>)
+  value == null ? nothing() : just(value)
