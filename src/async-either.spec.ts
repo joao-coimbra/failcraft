@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from "bun:test"
-import { from } from "./async-either"
 import { type Either, left, right } from "./either"
+import { from } from "./from"
 
 function doSomething(shouldSuccess: boolean): Either<string, number> {
   if (shouldSuccess) {
