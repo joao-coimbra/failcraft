@@ -1,6 +1,6 @@
-import type { AsyncMaybe } from "./async-maybe"
+import { AsyncMaybe } from "./async-maybe"
 import { BaseJust, BaseMaybe, BaseNothing } from "./base-maybe"
-import type { Either } from "./either"
+import { type Either, left, right } from "./either"
 
 export type { MaybeMatch, MaybeOn } from "./base-maybe"
 
@@ -68,7 +68,6 @@ export class Just<T> extends BaseJust<T> {
   transform<U>(fn: (value: T) => U | Promise<U>): Maybe<U> | AsyncMaybe<U> {
     const result = fn(this.value)
     if (result instanceof Promise) {
-      const { AsyncMaybe } = require("./async-maybe")
       return new AsyncMaybe(result.then((v: U) => just<U>(v)))
     }
     return just(result as U)
@@ -81,7 +80,6 @@ export class Just<T> extends BaseJust<T> {
   ): Maybe<U> | AsyncMaybe<U> {
     const result = fn(this.value)
     if (result instanceof Promise) {
-      const { AsyncMaybe } = require("./async-maybe")
       return new AsyncMaybe(result)
     }
     return result
@@ -104,7 +102,6 @@ export class Just<T> extends BaseJust<T> {
   }
 
   toEither<L>(_leftValue: L): Either<L, T> {
-    const { right } = require("./either")
     return right(this.value)
   }
 }
@@ -116,7 +113,6 @@ export class Nothing extends BaseNothing<never> {
     // Note: () => Promise.resolve(...) without async keyword is not detected here.
     // Use async () => ... for reliable async detection on Nothing.
     if (isAsyncFn(fn as (...args: unknown[]) => unknown)) {
-      const { AsyncMaybe } = require("./async-maybe")
       return new AsyncMaybe(Promise.resolve(this as unknown as Maybe<U>))
     }
     return this as unknown as Maybe<U>
@@ -128,7 +124,6 @@ export class Nothing extends BaseNothing<never> {
     fn: (value: never) => Maybe<U> | Promise<Maybe<U>>
   ): Maybe<U> | AsyncMaybe<U> {
     if (isAsyncFn(fn as (...args: unknown[]) => unknown)) {
-      const { AsyncMaybe } = require("./async-maybe")
       return new AsyncMaybe(Promise.resolve(this as unknown as Maybe<U>))
     }
     return this as unknown as Maybe<U>
@@ -151,7 +146,6 @@ export class Nothing extends BaseNothing<never> {
   }
 
   toEither<L>(leftValue: L): Either<L, never> {
-    const { left } = require("./either")
     return left(leftValue)
   }
 }

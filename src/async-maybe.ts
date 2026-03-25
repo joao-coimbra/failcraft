@@ -1,4 +1,4 @@
-import type { AsyncEither } from "./async-either"
+import { AsyncEither } from "./async-either"
 import { just, type Maybe, type MaybeMatch, type MaybeOn } from "./maybe"
 
 /**
@@ -66,7 +66,6 @@ export class AsyncMaybe<T> {
   }
 
   toEither<L>(leftValue: L): AsyncEither<L, T> {
-    const { AsyncEither } = require("./async-either")
     return new AsyncEither(
       this.promise.then((maybe) => maybe.toEither(leftValue))
     )
