@@ -88,7 +88,12 @@ export abstract class Either<L, R> {
    *
    * @param cases - Both `left` and `right` handlers must be provided.
    */
-  abstract match<T>(cases: EitherMatch<L, R, T>): T
+  match<T>(cases: EitherMatch<L, R, T>): T {
+    if (this.isLeft()) {
+      return cases.left(this.value as L)
+    }
+    return cases.right(this.value as R)
+  }
 
   /**
    * Maps the right value through `fn`, leaving a left untouched.
@@ -153,10 +158,6 @@ export class Left<L, R = never> extends Either<L, R> {
     return false
   }
 
-  match<T>(cases: EitherMatch<L, R, T>): T {
-    return cases.left(this.value)
-  }
-
   transform<T>(fn: (value: R) => Promise<T>): AsyncEither<L, T>
   transform<T>(fn: (value: R) => T): Either<L, T>
   transform<T>(
@@ -207,10 +208,6 @@ export class Right<R, L = never> extends Either<L, R> {
 
   isRight(): this is Right<R, L> {
     return true
-  }
-
-  match<T>(cases: EitherMatch<L, R, T>): T {
-    return cases.right(this.value)
   }
 
   transform<T>(fn: (value: R) => Promise<T>): AsyncEither<L, T>
