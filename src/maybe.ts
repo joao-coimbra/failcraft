@@ -48,7 +48,9 @@ export abstract class Maybe<T> {
     return this.isJust()
   }
 
-  abstract isNothing(): this is Nothing
+  isNothing(): this is Nothing {
+    return !this.isJust()
+  }
 
   abstract on(cases: MaybeOn<T>): this
 
@@ -91,10 +93,6 @@ export class Just<T> extends Maybe<T> {
 
   isJust(): this is Just<T> {
     return true
-  }
-
-  isNothing(): this is Nothing {
-    return false
   }
 
   on(cases: MaybeOn<T>): this {
@@ -154,10 +152,6 @@ export class Nothing extends Maybe<never> {
 
   isJust(): this is Just<never> {
     return false
-  }
-
-  isNothing(): this is Nothing {
-    return true
   }
 
   on(cases: MaybeOn<never>): this {
