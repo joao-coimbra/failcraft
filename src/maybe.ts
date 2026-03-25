@@ -171,5 +171,5 @@ export const nothing = (): Maybe<never> => new Nothing()
  * maybe(0)               // just(0)
  * maybe(null)            // nothing()
  */
-export const maybe = <T>(value: T | null | undefined): Maybe<NonNullable<T>> =>
+export const maybe = <T>(value?: T | null): Maybe<NonNullable<T>> =>
   value == null ? nothing() : just(value)
