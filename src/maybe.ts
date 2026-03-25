@@ -61,7 +61,12 @@ export abstract class Maybe<T> {
     return this
   }
 
-  abstract match<U>(cases: MaybeMatch<T, U>): U
+  match<U>(cases: MaybeMatch<T, U>): U {
+    if (this.isJust()) {
+      return cases.just(this.value)
+    }
+    return cases.nothing()
+  }
 
   /**
    * Maps the value through `fn`, leaving Nothing untouched.
@@ -100,10 +105,6 @@ export class Just<T> extends Maybe<T> {
 
   isJust(): this is Just<T> {
     return true
-  }
-
-  match<U>(cases: MaybeMatch<T, U>): U {
-    return cases.just(this.value)
   }
 
   transform<U>(fn: (value: T) => Promise<U>): AsyncMaybe<U>
@@ -154,10 +155,6 @@ export class Nothing extends Maybe<never> {
 
   isJust(): this is Just<never> {
     return false
-  }
-
-  match<U>(cases: MaybeMatch<never, U>): U {
-    return cases.nothing()
   }
 
   transform<U>(fn: (value: never) => Promise<U>): AsyncMaybe<U>
