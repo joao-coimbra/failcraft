@@ -11,6 +11,7 @@
 <br />
 
 [![npm version](https://img.shields.io/npm/v/failcraft?style=for-the-badge&logo=npm&color=CB3837&logoColor=white)](https://www.npmjs.com/package/failcraft)
+[![CI](https://github.com/joao-coimbra/failcraft/actions/workflows/run-ci.yml/badge.svg)](https://github.com/joao-coimbra/failcraft/actions/workflows/run-ci.yml)
 [![license](https://img.shields.io/badge/license-MIT-22C55E?style=for-the-badge)](./LICENSE)
 [![typescript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![bun](https://img.shields.io/badge/Bun-ready-F9F1E1?style=for-the-badge&logo=bun&logoColor=black)](https://bun.sh)
