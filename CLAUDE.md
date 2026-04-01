@@ -131,46 +131,29 @@ git checkout main && git pull
 
 - Never `git push --tags` — pushes all local tags including unintended ones
 - Never create git tags for RC versions — tag only stable releases
-- Always use annotated tags (`-a`) — the Release GA reads the message as the GitHub Release body
 - Pushing a `v*.*.*` tag triggers two workflows automatically: `publish.yml` (npm) and `release.yml` (GitHub Release)
 - Working tree must be clean before `bun pm version`
 
+### Auto-Tag Flow
+
+When a PR with a version bump in `package.json` is merged to `main`, the `auto-tag.yml` workflow:
+1. Detects the version change
+2. Generates a short tag message via Claude Haiku (falls back to empty if API unavailable)
+3. Creates and pushes the annotated tag automatically
+
+**No manual tag creation needed.** Just bump the version and merge.
+
 ### Stable Release
-
-**Tag message format** — the Release GA uses the tag message verbatim as the GitHub Release body. Write it as:
-
-```
-v<x.y.z> — <one-line summary of the release>
-
-<one or two sentences describing the problem solved or the motivation>
-
-Changes:
-- <concrete change 1 — what was done and why it matters>
-- <concrete change 2>
-```
 
 ```bash
 bun pm version <x.y.z>
-# bun pm version creates an annotated tag automatically, but with no changelog.
-# Always delete and recreate it with a proper message before doing anything else:
-git tag -d v<x.y.z>
-git tag -a v<x.y.z> -m "v<x.y.z> — <summary>
-
-<motivation paragraph>
-
-Changes:
-- change 1
-- change 2"
-
 git checkout -b release/v<x.y.z>
 git push -u origin release/v<x.y.z>
 gh pr create --title "chore: release v<x.y.z>" --body "..."
 gh pr merge <number> --squash
 # wait for merge confirmation, then:
 git checkout main && git pull
-
-git push origin v<x.y.z>
-# publish.yml publishes to npm; release.yml creates the GitHub Release
+# auto-tag.yml creates the tag; publish.yml and release.yml trigger automatically
 ```
 
 ### RC / Pre-release
