@@ -3,10 +3,13 @@ name: Claude Code Review
 on:
   pull_request:
     types: [opened, synchronize, ready_for_review, reopened]
+    paths:
+      - 'src/**'
 
 jobs:
   review:
     runs-on: ubuntu-latest
+    if: ${{ !contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association) }}
     permissions:
       contents: read
       pull-requests: write
@@ -17,7 +20,6 @@ jobs:
           fetch-depth: 1
 
       - uses: anthropics/claude-code-action@v1
-        continue-on-error: true
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           claude_args: |
