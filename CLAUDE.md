@@ -177,6 +177,20 @@ bun run release --tag next
 - Do NOT change the trigger to `workflow_run` — `track_progress` breaks in that mode (`AutomationContext` has no `entityNumber`)
 - Test the pre-commit hook with `sh .husky/pre-commit`, not `bun x husky`
 
+### Multiple PRs in One Session
+
+When creating several PRs at once, stack them so each branch starts from the previous one — not all from `main`. This avoids the "branch not up to date" cycle on sequential merges.
+
+```bash
+git checkout -b pr-1 && git add <files> && git commit && git push
+gh pr create --head pr-1 --base main
+
+git checkout -b pr-2 && git add <files> && git commit && git push
+gh pr create --head pr-2 --base pr-1
+```
+
+Only stack when PRs are sequential and independent. If they touch the same files, resolve that before splitting.
+
 ## Project Architecture
 
 ```
