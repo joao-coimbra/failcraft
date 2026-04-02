@@ -15,6 +15,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.GH_PAT }}
 
       - name: Check version bump
         id: check
@@ -52,10 +53,5 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          if [ -n "$TAG_MESSAGE" ]; then
-            echo "$TAG_MESSAGE" > /tmp/tag-message.txt
-            git tag -a "v$VERSION" -F /tmp/tag-message.txt
-          else
-            git tag -a "v$VERSION" -m " "
-          fi
+          git tag -a "v$VERSION" -m "${TAG_MESSAGE}"
           git push origin "v$VERSION"
