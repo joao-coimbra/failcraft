@@ -7,30 +7,78 @@ on:
       - 'src/**'
 
 jobs:
-  review:
+  wait-for-ci:
     runs-on: ubuntu-latest
     if: ${{ !contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association) }}
+    outputs:
+      conclusion: ${{ steps.poll.outputs.conclusion }}
+      run-id: ${{ steps.poll.outputs.run-id }}
+    steps:
+      - name: Poll CI workflow
+        id: poll
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          for i in $(seq 1 20); do
+            echo "Attempt $i/20..."
+            RUN=$(gh run list --repo "$REPO" --workflow "Continuous Integration" --commit "$HEAD_SHA" --json status,conclusion,databaseId --jq '.[0]' 2>/dev/null || echo "null")
+            STATUS=$(echo "$RUN" | jq -r '.status // "not_found"')
+            CONCLUSION=$(echo "$RUN" | jq -r '.conclusion // ""')
+            RUN_ID=$(echo "$RUN" | jq -r '.databaseId // ""')
+            if [ "$STATUS" = "completed" ]; then
+              echo "conclusion=$CONCLUSION" >> "$GITHUB_OUTPUT"
+              echo "run-id=$RUN_ID" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "conclusion=timeout" >> "$GITHUB_OUTPUT"
+          echo "run-id=" >> "$GITHUB_OUTPUT"
+
+  notify-failure:
+    runs-on: ubuntu-latest
+    needs: wait-for-ci
+    if: ${{ needs.wait-for-ci.outputs.conclusion != 'success' }}
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Post failure comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          CONCLUSION: ${{ needs.wait-for-ci.outputs.conclusion }}
+          RUN_ID: ${{ needs.wait-for-ci.outputs.run-id }}
+        run: |
+          if [ "$CONCLUSION" = "timeout" ]; then
+            BODY=$(printf "> [!WARNING]\n> CI did not complete within 10 minutes — Claude review skipped.")
+          else
+            FAILED_JOBS=$(gh run view "$RUN_ID" --repo "$REPO" --json jobs --jq '[.jobs[] | select(.conclusion == "failure") | .name] | join(", ")')
+            BODY=$(printf "> [!CAUTION]\n> CI failed — Claude review paused.\n>\n> Failed jobs: %s" "$FAILED_JOBS")
+          fi
+          gh pr comment "$PR_NUMBER" --repo "$REPO" --body "$BODY"
+
+  review:
+    runs-on: ubuntu-latest
+    needs: wait-for-ci
+    if: ${{ needs.wait-for-ci.outputs.conclusion == 'success' }}
     permissions:
       contents: read
       pull-requests: write
       id-token: write
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
 
       - uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          claude_args: |
-            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
           track_progress: true
+          claude_args: '--allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"'
           prompt: |
-            Review the changes in this PR for `failcraft`, a functional error handling library for TypeScript (Either, Maybe, Result, AsyncEither, AsyncMaybe).
-            Focus only on real issues and relevant suggestions — no descriptions of what the code does.
-            Check for:
-            - Type safety: incorrect generics, unsafe casts, missing constraints, `any` leakage
-            - API consistency: transform/andThen/filter/match/on across sync and async variants, toEither/toMaybe conversions
-            - Correctness: edge cases in Nothing/Left propagation, short-circuit behaviour in async chains
-            - Test quality: missing edge cases, weak assertions, untested error paths
-            Use `gh pr comment` for general feedback. Use inline comments for specific line-level issues.
+            You are a first-pass assistant for the maintainer of this library. Read README.md for general context and CLAUDE.md for conventions.
+
+            Your goal is to give the maintainer a brief, useful summary before they do their own review — not to replace it. Describe what this PR actually changes and why it matters, then flag anything that deserves closer attention: questionable design choices, risky areas, or anything that looks out of place. CI already handles correctness mechanically, so skip what tools catch.
+
+            Be brief and to the point — only include what genuinely helps the maintainer. Use `gh pr comment` to post it.
