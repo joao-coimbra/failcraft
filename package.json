@@ -1,9 +1,23 @@
 {
   "name": "failcraft",
-  "description": "Functional error handling for TypeScript — type-safe Either, Maybe, and Result with composable async chains.",
   "version": "1.4.5",
+  "description": "Functional error handling for TypeScript — type-safe Either, Maybe, and Result with composable async chains.",
   "type": "module",
+  "license": "MIT",
   "private": false,
+  "author": {
+    "name": "João Henrique Benatti Coimbra",
+    "url": "https://github.com/joao-coimbra"
+  },
+  "homepage": "https://github.com/joao-coimbra/failcraft#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/joao-coimbra/failcraft.git"
+  },
+  "bugs": {
+    "url": "https://github.com/joao-coimbra/failcraft/issues"
+  },
+  "keywords": [],
   "files": [
     "dist",
     "README.md"
@@ -19,19 +33,9 @@
     },
     "./package.json": "./package.json"
   },
-  "keywords": [],
-  "author": {
-    "name": "João Henrique Benatti Coimbra",
-    "url": "https://github.com/joao-coimbra"
-  },
-  "license": "MIT",
-  "homepage": "https://github.com/joao-coimbra/failcraft#readme",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/joao-coimbra/failcraft.git"
-  },
-  "bugs": {
-    "url": "https://github.com/joao-coimbra/failcraft/issues"
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
   },
   "scripts": {
     "build": "bunup",
@@ -42,18 +46,14 @@
     "prepublishOnly": "bun run build",
     "prepare": "husky"
   },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
   "devDependencies": {
     "@biomejs/biome": "2.4.7",
     "@types/bun": "latest",
     "bunup": "^0.16.31",
     "husky": "^9.1.7",
     "ultracite": "7.3.2"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
-  },
-  "publishConfig": {
-    "registry": "https://registry.npmjs.org/",
-    "access": "public"
   }
 }
